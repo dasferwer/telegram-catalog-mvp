@@ -1,0 +1,13 @@
+body { font-family: system-ui, sans-serif; max-width: 960px; margin: auto; padding: 1rem; color: #171717; background: #fff; }
+header { padding-bottom: 1rem; border-bottom: 1px solid #ccc; }
+a { color: #1450ad; }
+img { display: block; max-width: 100%; height: auto; object-fit: contain; }
+.products { display: flex; flex-wrap: wrap; gap: 2rem; padding-left: 1.5rem; }
+.products li { max-width: 240px; }
+button, input { font: inherit; padding: .4rem; }
+button { cursor: pointer; }
+button:disabled { cursor: default; }
+input[type=number] { width: 4rem; }
+.cart-item { padding-block: 1rem; }
+.cart-item button { margin-left: .5rem; }
+[role=alert] { color: #a01010; }

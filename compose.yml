@@ -1,0 +1,157 @@
+name: telegram-catalog
+x-environment: &environment
+  DATABASE_URL: postgresql+asyncpg://catalog_app:${APP_DATABASE_PASSWORD:?Generate local credentials}@postgres:5432/catalog
+  S3_ENDPOINT: http://minio:9000
+  S3_ACCESS_KEY: ${S3_ACCESS_KEY:-catalog-app}
+  S3_SECRET_KEY: ${S3_SECRET_KEY:?Generate local credentials}
+  S3_BUCKET: product-photos
+  PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:-http://localhost:8088}
+  COOKIE_SECURE: ${COOKIE_SECURE:-false}
+  BOT_TOKEN: ${BOT_TOKEN:-}
+  WEBHOOK_SECRET: ${WEBHOOK_SECRET:-}
+  ADMIN_IDS: ${ADMIN_IDS:-}
+x-app: &app
+  image: telegram-catalog-python:0.1.0
+  build:
+    context: .
+    dockerfile: backend/Dockerfile
+    target: runtime
+  environment: *environment
+  read_only: true
+  security_opt: [no-new-privileges:true]
+  cap_drop: [ALL]
+  restart: unless-stopped
+  mem_limit: 384m
+  pids_limit: 128
+  depends_on:
+    database-init: {condition: service_completed_successfully}
+    storage-init: {condition: service_completed_successfully}
+  healthcheck:
+    test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/ready',timeout=8)"]
+    interval: 5s
+    timeout: 10s
+    retries: 12
+services:
+  postgres:
+    image: telegram-catalog-postgres:17
+    build:
+      context: .
+      dockerfile: infra/postgres.Dockerfile
+    environment:
+      POSTGRES_USER: catalog
+      POSTGRES_DB: catalog
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Generate local credentials}
+    volumes: [postgres-data:/var/lib/postgresql/data]
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U catalog -d catalog]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+    mem_limit: 384m
+  minio:
+    image: telegram-catalog-minio:7aac2a2c
+    build:
+      context: .
+      dockerfile: infra/minio.Dockerfile
+      target: minio
+    user: '0:0'
+    environment:
+      MINIO_ROOT_USER: ${S3_ROOT_USER:-localcatalog}
+      MINIO_ROOT_PASSWORD: ${S3_ROOT_PASSWORD:?Generate local credentials}
+    volumes: [minio-data:/data]
+    healthcheck:
+      test: [CMD, /usr/local/bin/healthcheck]
+      interval: 3s
+      timeout: 3s
+      retries: 60
+    restart: unless-stopped
+    mem_limit: 768m
+  migrate:
+    <<: *app
+    restart: 'no'
+    command: [alembic, upgrade, head]
+    environment:
+      DATABASE_URL: postgresql+asyncpg://catalog:${POSTGRES_PASSWORD:?Generate local credentials}@postgres:5432/catalog
+    healthcheck: {disable: true}
+    depends_on:
+      postgres: {condition: service_healthy}
+  database-init:
+    <<: *app
+    restart: 'no'
+    command: [python, -m, shop.database_init]
+    environment:
+      DATABASE_URL: postgresql+asyncpg://catalog:${POSTGRES_PASSWORD:?Generate local credentials}@postgres:5432/catalog
+      APP_DATABASE_PASSWORD: ${APP_DATABASE_PASSWORD:?Generate local credentials}
+    healthcheck: {disable: true}
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+  storage-init:
+    image: telegram-catalog-storage-init:7aac2a2c
+    build:
+      context: .
+      dockerfile: infra/minio.Dockerfile
+      target: storage-init
+    environment:
+      S3_ENDPOINT: http://minio:9000
+      S3_ROOT_USER: ${S3_ROOT_USER:-localcatalog}
+      S3_ROOT_PASSWORD: ${S3_ROOT_PASSWORD:?Generate local credentials}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-catalog-app}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:?Generate local credentials}
+      S3_BUCKET: product-photos
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 128m
+    restart: 'no'
+    depends_on:
+      minio: {condition: service_healthy}
+  api:
+    <<: *app
+    deploy: {replicas: 2}
+  bot:
+    <<: *app
+    command: [uvicorn, 'shop.bot:app', --host, 0.0.0.0, --port, '8001', --no-access-log, --limit-concurrency, '16']
+    deploy: {replicas: 2}
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://localhost:8001/health/ready',timeout=8)"]
+      interval: 5s
+      timeout: 10s
+      retries: 12
+  web:
+    image: telegram-catalog-web:0.1.0
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    environment: {API_INTERNAL_URL: 'http://api:8000'}
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped
+    mem_limit: 384m
+    pids_limit: 128
+    deploy: {replicas: 2}
+    depends_on:
+      api: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://localhost:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  gateway:
+    image: haproxy:3.2-alpine@sha256:dfba86f031bd4c9039f10f8cc5de75991d1b6766d5460f0335b980408503baad
+    ports: ['127.0.0.1:${HTTP_PORT:-8088}:8080']
+    volumes: ['./infra/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro']
+    read_only: true
+    restart: unless-stopped
+    depends_on:
+      api: {condition: service_healthy}
+      bot: {condition: service_healthy}
+      web: {condition: service_healthy}
+volumes:
+  postgres-data:
+  minio-data:
+networks:
+  default:
+    ipam:
+      config: [{subnet: '${COMPOSE_SUBNET:-10.247.88.0/24}'}]

@@ -1,0 +1,55 @@
+x-test-environment: &test-environment
+  TELEGRAM_API_URL: http://telegram-test:8081
+  BOT_TOKEN: '123456:TEST_ONLY_NOT_A_REAL_TOKEN'
+  WEBHOOK_SECRET: local-test-webhook-secret
+  ADMIN_IDS: '42'
+services:
+  api:
+    environment: *test-environment
+  bot:
+    environment: *test-environment
+    depends_on:
+      telegram-test: {condition: service_healthy}
+  telegram-test:
+    image: telegram-catalog-tests:0.1.0
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+      target: test
+    command: [python, tests/telegram_stub.py]
+    environment: {PYTHONDONTWRITEBYTECODE: '1'}
+    read_only: true
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://localhost:8081/health',timeout=2)"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+  tests:
+    image: telegram-catalog-tests:0.1.0
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+      target: test
+    profiles: [checks]
+    environment:
+      APP_DATABASE_PASSWORD: ${APP_DATABASE_PASSWORD:?Generate local credentials}
+      APP_S3_ACCESS_KEY: ${S3_ACCESS_KEY:-catalog-app}
+      APP_S3_SECRET_KEY: ${S3_SECRET_KEY:?Generate local credentials}
+      DATABASE_URL: postgresql+asyncpg://catalog:${POSTGRES_PASSWORD:?Generate local credentials}@postgres:5432/catalog
+      S3_ENDPOINT: http://minio:9000
+      S3_ACCESS_KEY: ${S3_ROOT_USER:-localcatalog}
+      S3_SECRET_KEY: ${S3_ROOT_PASSWORD:?Generate local credentials}
+      S3_BUCKET: product-photos
+      PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:-http://localhost:8088}
+      BOT_TOKEN: '123456:TEST_ONLY_NOT_A_REAL_TOKEN'
+      WEBHOOK_SECRET: local-test-webhook-secret
+      ADMIN_IDS: '42'
+      TELEGRAM_API_URL: http://telegram-test:8081
+      INTEGRATION: '1'
+      PYTHONPATH: /app
+    command: [.venv/bin/pytest, -q, -s, -p, no:cacheprovider]
+    read_only: true
+    depends_on:
+      api: {condition: service_healthy}
+      bot: {condition: service_healthy}
+      web: {condition: service_healthy}

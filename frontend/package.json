@@ -1,0 +1,8 @@
+{
+  "name": "telegram-catalog-web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {"dev": "next dev", "build": "next build", "start": "next start", "typecheck": "tsc --noEmit", "test:e2e": "playwright test"},
+  "dependencies": {"next": "16.4.2", "react": "19.3.1", "react-dom": "19.3.1"},
+  "devDependencies": {"typescript": "~5.9.3", "@types/node": "^24.0.0", "@types/react": "^19.0.0", "@types/react-dom": "^19.0.0", "@playwright/test": "^1.58.2"}
+}
