@@ -4,7 +4,7 @@ import { SessionProvider } from "@/components/session";
 import "./style.css";
 
 export const metadata: Metadata = { title: "Каталог", icons: { icon: "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22/>" } };
-// Capture launch data before links can navigate, including when application chunks fail to load.
+// Сохраняем initData до переходов по страницам и загрузки остальных скриптов.
 const captureTelegramLaunch = `(function(){
   var params=new URLSearchParams(window.location.hash.slice(1));
   if(params.has('tgWebAppData')||params.has('tgWebAppVersion')){

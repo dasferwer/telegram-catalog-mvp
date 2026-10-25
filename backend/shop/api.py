@@ -118,7 +118,7 @@ async def new_session(
         path="/",
     )
     if settings.cookie_secure:
-        # Python 3.13's cookie serializer lacks Partitioned; retain Starlette's other attributes.
+        # Сериализатор Python 3.13 не поддерживает Partitioned; добавляем атрибут вручную.
         response.headers["set-cookie"] += "; Partitioned"
     return session
 

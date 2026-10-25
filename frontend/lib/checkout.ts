@@ -12,7 +12,7 @@ export function readCheckout(sessionKey: string): CheckoutAttempt | null {
     if (typeof value?.key === "string" && /^[0-9a-f-]{36}$/i.test(value.key)
       && Number.isSafeInteger(value.version) && value.version >= 0
       && (value.orderId === undefined || typeof value.orderId === "string")) return value;
-  } catch { /* An incomplete local record cannot identify a checkout attempt. */ }
+  } catch { /* Неполной записи недостаточно для повтора оформления. */ }
   sessionStorage.removeItem(checkoutSlot(sessionKey));
   return null;
 }

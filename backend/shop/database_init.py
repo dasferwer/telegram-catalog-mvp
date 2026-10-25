@@ -1,4 +1,4 @@
-"""Grant the runtime login access to existing tables without DDL or role administration."""
+"""Права роли приложения на существующие таблицы без доступа к DDL."""
 
 import asyncio
 import os
@@ -23,7 +23,7 @@ async def main() -> None:
             )
             if not exists:
                 await connection.execute(text("CREATE ROLE catalog_app LOGIN"))
-            # Fixed identifiers and a validated alphabet keep the DDL literal safe.
+            # Допустимый алфавит пароля исключает SQL-разделители.
             await connection.execute(
                 text(
                     "ALTER ROLE catalog_app LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE "

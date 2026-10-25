@@ -96,7 +96,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     if (!current.current) throw new Error(error || "Сессия загружается");
     let active = current.current;
     const cartRead = (init.method || "GET").toUpperCase() === "GET" && path === "/api/cart";
-    // Even a failed mutation can have committed; never rebind that tab to another guest.
+    // Запрос мог завершить commit до ошибки. После записи владельца вкладки менять нельзя.
     if (!cartRead) pristineGuest.current = false;
     for (let attempt = 0; attempt < 3; attempt++) {
       if (current.current?.checkout_scope !== active.checkout_scope) throw new Error("Владелец сессии изменился. Откройте каталог заново.");

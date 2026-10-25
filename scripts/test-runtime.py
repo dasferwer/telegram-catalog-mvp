@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run destructive fault checks only against this project's local test stack."""
+"""Проверки отказов только для локального тестового стенда проекта."""
 
 import json
 import subprocess
@@ -14,7 +14,7 @@ def run(*args: str) -> str:
 
 
 def main() -> None:
-    # Container IDs are selected from this Compose project, never from user input.
+    # Идентификаторы контейнеров берутся из текущего Compose-проекта.
     containers: dict[str, tuple[str, str]] = {}
     for service in ("api", "bot", "web", "postgres", "minio"):
         ids = run("ps", "-q", service).splitlines()

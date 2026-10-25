@@ -31,7 +31,7 @@ def configure_http(app: FastAPI) -> None:
 
     @app.exception_handler(SQLAlchemyError)
     async def database_error(request: Request, exc: SQLAlchemyError) -> JSONResponse:
-        # Deliberately omit SQL parameters and connection credentials from public errors/logs.
+        # SQL-параметры и реквизиты подключения не должны попадать в ответы и логи.
         print(
             f"database_unavailable instance={socket.gethostname()} type={type(exc).__name__}",
             flush=True,

@@ -62,7 +62,7 @@ async def process(update: Update) -> None:
             assert receipt is not None
             receipt.reply = result if isinstance(result, dict) else None
             receipt.delivered = receipt.reply is None
-    # Product and state are committed before the separate, retryable external reply.
+    # Товар и состояние уже сохранены; ответ отправляется отдельно.
     async with sessions() as db, db.begin():
         receipt = await db.scalar(
             select(BotUpdate)
@@ -76,7 +76,7 @@ async def process(update: Update) -> None:
                 try:
                     await bot.answer_callback_query(update.callback_query.id)
                 except TelegramBadRequest:
-                    # Expired callback acknowledgements are cosmetic; the durable reply was sent.
+                    # Ответ уже доставлен; срок подтверждения callback мог истечь.
                     pass
             receipt.delivered = True
 
@@ -102,7 +102,7 @@ async def webhook(request: Request) -> JSONResponse:
         async with asyncio.timeout(40):
             await process(update)
     except Exception as exc:
-        # Never log request bodies, bot tokens, S3 credentials or SDK exception URLs.
+        # Ошибки SDK могут содержать тело запроса, токены или реквизиты S3.
         print(
             f"webhook_retry instance={socket.gethostname()} "
             f"update={update.update_id} type={type(exc).__name__}",

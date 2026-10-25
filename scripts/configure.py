@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Create local credentials without printing them or replacing an existing configuration."""
+"""Создать локальные реквизиты, сохранив существующую конфигурацию."""
 
 import argparse
 import os

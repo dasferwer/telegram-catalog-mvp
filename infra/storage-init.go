@@ -95,7 +95,7 @@ func initialize() error {
 
 func main() {
 	if err := initialize(); err != nil {
-		// SDK error strings can contain credentials or signed URLs.
+		// Ошибки SDK могут содержать ключи или подписанные ссылки.
 		fmt.Fprintln(os.Stderr, "Storage initialization failed; check configuration and connectivity")
 		os.Exit(1)
 	}
