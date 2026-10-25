@@ -14,6 +14,6 @@ FROM python:3.13-slim-trixie@sha256:d98cc29d3266e535dd9da1099688d9cb3ca475381357
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PATH="/app/.venv/bin:$PATH"
 WORKDIR /app
 RUN rm -rf /usr/local/lib/python3.13/site-packages/pip* /usr/local/bin/pip*
-COPY --from=build /app /app
+COPY --from=build --chown=10001:10001 /app /app
 USER 10001:10001
 CMD ["uvicorn", "shop.api:app", "--host", "0.0.0.0", "--port", "8000", "--no-access-log", "--limit-concurrency", "32"]
